@@ -41,7 +41,9 @@ subarachnoid_hemorrhage.tsv
 testicular_cancer.tsv
 ```
 
-And each file looks like this:
+Each file have the following columns: id, doi, pmid, title, abstract
+
+And they look like this:
 
 ```
 f66bdc15ae683153d787560778573d904fa7ebca	10.1016/S0140-6736(10)60278-4	20552718	Elective high-frequency oscillatory versus conventional ventilation in preterm infants: a systematic review and meta-analysis of individual patients' data.	BACKGROUND: Population and study design heterogeneity has confounded previous meta-analyses, leading to uncertainty about effectiveness and safety of elective high-frequency oscillatory ventilation (HFOV) in preterm infants. We assessed effectiveness of elective HFOV versus conventional ventilation in this group. METHODS: We did a systematic review and meta-analysis of individual patients' data from 3229 participants in ten randomised controlled trials, with the primary outcomes of death or bronchopulmonary dysplasia at 36 weeks' postmenstrual age, death or severe adverse neurological event, or any of these outcomes. FINDINGS: For infants ventilated with HFOV, the relative risk of death or bronchopulmonary dysplasia at 36 weeks' postmenstrual age was 0.95 (95% CI 0.88-1.03), of death or severe adverse neurological event 1.00 (0.88-1.13), or any of these outcomes 0.98 (0.91-1.05). No subgroup of infants (eg, gestational age, birthweight for gestation, initial lung disease severity, or exposure to antenatal corticosteroids) benefited more or less from HFOV. Ventilator type or ventilation strategy did not change the overall treatment effect. INTERPRETATION: HFOV seems equally effective to conventional ventilation in preterm infants. Our results do not support selection of preterm infants for HFOV on the basis of gestational age, birthweight for gestation, initial lung disease severity, or exposure to antenatal corticosteroids. FUNDING: Nestlé Belgium, Belgian Red Cross, and Dräger International.
@@ -61,7 +63,7 @@ python main.py relevants data/references/sr_groups/ 4 > data/relevants_title.tsv
 ```
 
 ```
-python main.py stopwords data/references/sr_groups/ 4 > data/relevants_abstract.tsv
+python main.py stopwords data/references/sr_groups/ 5 > data/relevants_abstract.tsv
 ```
 
 We will obtain a tab separated file, looking like this in my case:
