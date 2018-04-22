@@ -63,7 +63,7 @@ python main.py relevants data/references/sr_groups/ 4 > data/relevants_title.tsv
 ```
 
 ```
-python main.py stopwords data/references/sr_groups/ 5 > data/relevants_abstract.tsv
+python main.py relevants data/references/sr_groups/ 5 > data/relevants_abstract.tsv
 ```
 
 We will obtain a tab separated file, looking like this in my case:
