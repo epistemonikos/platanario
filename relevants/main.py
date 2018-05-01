@@ -4,7 +4,7 @@ import glob
 import os
 from random import randint
 
-from relevant_phrases import RelevantPhrases, Stopwords
+from relevant_phrases import RelevantPhrases, Stopwords, Phrases
 
 def print_row(row):
     print("\t".join([str(el) for el in row]))
@@ -62,11 +62,12 @@ def calculate_stopwords():
     folder_path = sys.argv[2]
     column_index = int(sys.argv[3]) - 1
 
-    relevant_phrases = calculate_textrank_for_folder(
-        folder_path, column_index, stopwords="stopwords.txt"
-    )
-
-    stop_words_instance = Stopwords(relevant_phrases)
+    phrases = []
+    for input_path in glob.glob(folder_path + "/*.tsv"):
+        file_id = input_path.split("/")[-1].split(".tsv")[0]
+        for row in read_rows(input_path, sep="\t"):
+            phrases.append((file_id, Phrases([row[column_index], ]).all_phrases))
+    stop_words_instance = Stopwords(phrases)
     stopwords = stop_words_instance.calculate_stopwords()
     for stopword in stopwords:
         print(stopword)
