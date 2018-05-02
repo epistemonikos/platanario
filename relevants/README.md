@@ -47,8 +47,7 @@ We will try to identify, stopwords for this groups of documents, an we will excl
 The way we are going to calculate the stopwords, is to get the data for 3 different groups. In this case, all of those groups are health releated cientific articles, for different diseases. A minimum of 3 groups is recommended to get good results.
 
 ```
-export TARGET_FOLDER="examples/health_articles"
-python main.py stopwords data/${TARGET_FOLDER}/ 5 > data/${TARGET_FOLDER}_possible_stopwords.txt
+python main.py stopwords data/examples/health_articles/ 5 > data/examples/health_articles_stopwords.txt
 ```
 The parameter 5, means we are going to use the fith column of the file (remember the file is separated by tabs), in my case the fith column was the abstract of the reference.
 

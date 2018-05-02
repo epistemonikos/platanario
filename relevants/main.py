@@ -36,9 +36,9 @@ def calculate_textrank_for_folder(folder_path, column_indexes, stopwords=None):
         text_rank.calculate(group_id)
     return text_rank
 
-def caculate_relevant(folder_path, column_indexes):
+def caculate_relevant(folder_path, column_indexes, stopwords_path):
     relevant_phrases = calculate_textrank_for_folder(
-        folder_path, column_indexes, stopwords="data/stopwords.txt"
+        folder_path, column_indexes, stopwords=stopwords_path
     )
     print_row(["group_id", "phrase", "count", "rank"])
     for group_id in relevant_phrases.groups_phrases:
@@ -75,7 +75,7 @@ def main():
         for index in sys.argv[3].split(",")
     ]
     if sys.argv[1] == "relevants":
-        caculate_relevant(folder_path, column_indexes)
+        caculate_relevant(folder_path, column_indexes, sys.argv[4])
     elif sys.argv[1] == "stopwords":
         calculate_stopwords(folder_path, column_indexes)
 
