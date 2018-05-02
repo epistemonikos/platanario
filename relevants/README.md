@@ -8,7 +8,7 @@ Identify relevants phrases from a group of documents. A document can be anything
 ## Installing
 ```
 pip install -r requirements.txt
-mkdir data
+python -m spacy download en
 ```
 
 ## Example data
@@ -26,7 +26,7 @@ ls -1 data/examples/health_articles
  * personality_disorder.tsv
  * testicular_cancer.tsv
 
-Each one of those documents look like this: 
+Each one of those documents look like this:
 
 ```
 head -n2 data/examples/health_articles/common_cold.tsv
@@ -132,4 +132,27 @@ The count is the counter for that specific phrase in the group
 The rank is a metric calculated using pytextrank, based in the context.
 You can filter by the count. For example only phrases that has more than 1 in count.
 
+## Calculate phrases for each document
+
+```
+python main.py document_phrases data/examples/health_articles 4,5 1 data/examples/health_articles_stopwords.txt > data/examples/health_articles_documents.tsv
+```
+
+Where 1 is the column index for the id. And 4,5 are the indexes for title and abtract columns.
+
+
+This will generate a tsv file, with all phrases found in each reference:
+
+| group_id          | document_id                              | phrase                               | count | rank                 |
+|-------------------|------------------------------------------|--------------------------------------|-------|----------------------|
+| testicular_cancer | 926d725230b039d1a4123055f43641e52621c577 | testicular cancer                    | 11    | 0.07533353988299264  |
+| testicular_cancer | 926d725230b039d1a4123055f43641e52621c577 | testicular                           | 1     | 0.03766676994149632  |
+| testicular_cancer | 926d725230b039d1a4123055f43641e52621c577 | testicular cancer-specific mortality | 1     | 0.03766676994149632  |
+| testicular_cancer | 926d725230b039d1a4123055f43641e52621c577 | cancer                               | 12    | 0.037328537235407244 |
+| testicular_cancer | 926d725230b039d1a4123055f43641e52621c577 | testicular atrophy                   | 1     | 0.025111179960997546 |
+| testicular_cancer | 926d725230b039d1a4123055f43641e52621c577 | patient self-examination             | 1     | 0.02509105716599849  |
+| testicular_cancer | 926d725230b039d1a4123055f43641e52621c577 | full text review                     | 1     | 0.02296718556441431  |
+| testicular_cancer | 926d725230b039d1a4123055f43641e52621c577 | favourable outcomes                  | 1     | 0.016710738962152232 |
+| testicular_cancer | 926d725230b039d1a4123055f43641e52621c577 | electronic searches                  | 1     | 0.01387702717254634  |
+| testicular_cancer | 926d725230b039d1a4123055f43641e52621c577 | mortality                            | 2     | 0.011207015964876282 |
 
