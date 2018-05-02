@@ -41,12 +41,18 @@ def caculate_relevant(folder_path, column_indexes, stopwords_path):
         folder_path, column_indexes, stopwords=stopwords_path
     )
     print_row(["group_id", "phrase", "count", "rank"])
+    # TODO: improve this fix
+    already_added = {}
     for group_id in relevant_phrases.groups_phrases:
+        already_added[group_id] = {}
         for phrase_data in sorted(
                 relevant_phrases.groups_phrases[group_id],
                 key=lambda x: x.get("count") * x.get("rank"),
                 reverse=True
             ):
+            if already_added.get(phrase_data.get("text")):
+                continue
+            already_added[phrase_data.get("text")] = True
             print_row(
                 [
                     group_id,
@@ -68,6 +74,20 @@ def calculate_stopwords(folder_path, column_indexes):
     for stopword in stopwords:
         print(stopword)
 
+
+def calculate_document_phrases(folder_path, column_indexes, id_index, stopwords_path):
+    stopwords = dict([(line.rstrip("\r\n"), True) for line in open(stopwords_path).readlines()])
+    for input_path in glob.glob(folder_path + "/*.tsv"):
+        file_id = input_path.split("/")[-1].split(".tsv")[0]
+        for row in read_rows(input_path, sep="\t"):
+            texts = [row[column_index] for column_index in column_indexes]
+            id_ = row[id_index - 1]
+            for phrase in Phrases(texts).all_phrases:
+                if stopwords.get(phrase['text']):
+                    continue
+                print_row((file_id, id_, phrase['text'], phrase['count'], phrase['rank']))
+
+
 def main():
     folder_path = sys.argv[2]
     column_indexes = [
@@ -78,6 +98,10 @@ def main():
         caculate_relevant(folder_path, column_indexes, sys.argv[4])
     elif sys.argv[1] == "stopwords":
         calculate_stopwords(folder_path, column_indexes)
+    elif sys.argv[1] == "document_phrases":
+        id_index = sys.argv[4]
+        stopwords_path = sys.argv[5]
+        calculate_document_phrases(folder_path, column_indexes, int(id_index), stopwords_path)
 
 if __name__ == "__main__":
     main()
