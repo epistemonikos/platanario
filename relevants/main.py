@@ -52,7 +52,7 @@ def caculate_relevant(folder_path, column_indexes):
                     group_id,
                     phrase_data.get("text"),
                     phrase_data.get("count"),
-                    phrase_data.get("rank")
+                    round(phrase_data.get("rank"), 4)
                 ]
             )
 
