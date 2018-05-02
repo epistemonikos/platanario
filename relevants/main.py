@@ -4,7 +4,7 @@ import glob
 import os
 from random import randint
 
-from relevant_phrases import RelevantPhrases, Stopwords
+from relevant_phrases import RelevantPhrases, Stopwords, Phrases
 
 def print_row(row):
     print("\t".join([str(el) for el in row]))
@@ -23,7 +23,7 @@ def prepare_text(rows, column_index):
     text = "\n".join([row[column_index] for row in rows])
     return [{"id": id_, "text": text}, ]
 
-def calculate_textrank_for_folder(folder_path, column_index, stopwords=None):
+def calculate_textrank_for_folder(folder_path, column_indexes, stopwords=None):
     text_rank = RelevantPhrases(stopwords)
     group_id = None
     for input_path in glob.glob(folder_path + "/*.tsv"):
@@ -31,16 +31,14 @@ def calculate_textrank_for_folder(folder_path, column_index, stopwords=None):
         print(group_id, file=sys.stderr)
         rows = read_rows(input_path, sep="\t")
         for row in rows:
-            text_rank.add_text(row[column_index], group_id)
+            text = ". ".join([row[column_index] for column_index in column_indexes])
+            text_rank.add_text(text, group_id)
         text_rank.calculate(group_id)
     return text_rank
 
-def main():
-    folder_path = sys.argv[2]
-    column_index = int(sys.argv[3]) - 1
-
+def caculate_relevant(folder_path, column_indexes, stopwords_path):
     relevant_phrases = calculate_textrank_for_folder(
-        folder_path, column_index, stopwords="data/stopwords.txt"
+        folder_path, column_indexes, stopwords=stopwords_path
     )
     print_row(["group_id", "phrase", "count", "rank"])
     for group_id in relevant_phrases.groups_phrases:
@@ -54,25 +52,32 @@ def main():
                     group_id,
                     phrase_data.get("text"),
                     phrase_data.get("count"),
-                    phrase_data.get("rank")
+                    round(phrase_data.get("rank"), 4)
                 ]
             )
 
-def calculate_stopwords():
-    folder_path = sys.argv[2]
-    column_index = int(sys.argv[3]) - 1
-
-    relevant_phrases = calculate_textrank_for_folder(
-        folder_path, column_index, stopwords="stopwords.txt"
-    )
-
-    stop_words_instance = Stopwords(relevant_phrases)
+def calculate_stopwords(folder_path, column_indexes):
+    phrases = []
+    for input_path in glob.glob(folder_path + "/*.tsv"):
+        file_id = input_path.split("/")[-1].split(".tsv")[0]
+        for row in read_rows(input_path, sep="\t"):
+            texts = [row[column_index] for column_index in column_indexes]
+            phrases.append((file_id, Phrases(texts).all_phrases))
+    stop_words_instance = Stopwords(phrases)
     stopwords = stop_words_instance.calculate_stopwords()
     for stopword in stopwords:
         print(stopword)
 
-if __name__ == "__main__":
+def main():
+    folder_path = sys.argv[2]
+    column_indexes = [
+        int(index) - 1
+        for index in sys.argv[3].split(",")
+    ]
     if sys.argv[1] == "relevants":
-        main()
+        caculate_relevant(folder_path, column_indexes, sys.argv[4])
     elif sys.argv[1] == "stopwords":
-        calculate_stopwords()
+        calculate_stopwords(folder_path, column_indexes)
+
+if __name__ == "__main__":
+    main()
