@@ -8,7 +8,7 @@ Identify relevants phrases from a group of documents. A document can be anything
 ## Installing
 ```
 pip install -r requirements.txt
-mkdir data
+python -m spacy download en
 ```
 
 ## Example data
@@ -26,7 +26,7 @@ ls -1 data/examples/health_articles
  * personality_disorder.tsv
  * testicular_cancer.tsv
 
-Each one of those documents look like this: 
+Each one of those documents look like this:
 
 ```
 head -n2 data/examples/health_articles/common_cold.tsv

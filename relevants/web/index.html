@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Platanario</title>
+    <link href="bower_components/bootstrap/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- DATA -->
+    <script type="text/javascript" src="common_cold_2.js"></script>
+    <script type="text/javascript" src="citations.js"></script>
+    <!-- DATA -->
+
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script type="text/javascript" src="bower_components/angular/angular.min.js"></script>
+    <script type="text/javascript" src="bower_components/bootstrap/dist/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="bower_components/underscore/underscore-min.js"></script>
+    <script type="text/javascript" src="bower_components/angular-bootstrap/ui-bootstrap-tpls.min.js"></script>
+
+    <style type="text/css">
+    .document {
+        border: 1px solid black;
+        margin: 5px 0px;
+        padding: 10px;
+    }
+    .document p{
+        margin-bottom: 2px;
+    }
+    .panel-body {
+        max-height: 500px;
+        overflow-y: scroll;
+    }
+    .clickable {
+        cursor: pointer;
+    }
+    .selected {
+        background-color: #FFCDBC;
+    }
+    .phrases_container {
+        max-height: 500px;
+        overflow-y: scroll;
+        padding: 20px 10px;
+        box-shadow: inset 3px 3px 12px -9px rgba(0,0,0,0.75);
+        border: 1px solid #e2e2e2;
+    }
+    .phrase {
+        margin: 4px 3px;
+        padding: 2px;
+        background-color: #B5FFC0;
+        display: inline-block;
+    }
+    .phrase.sugggested.selected {
+        background-color: #A9C688;
+    }
+    .phrase.suggested {
+        background-color: #D9FFAF;
+    }
+    .phrase.selected {
+        background-color: #86BD8E;
+    }
+    .pico_component:hover  .remove_component {
+        opacity: 1;
+    }
+    .remove_component {
+        margin-left: 9px;
+        opacity: 0
+    }
+    .selected_filters {
+        background-color: #E2E2E2;
+    }
+    .selected_filters  span{
+        padding: 2px 5px;
+        margin: 0 4px;
+        background-color: #C6CEFF
+    }
+    </style>
+
+    <script type="text/javascript">
+        // debugger
+        var app = angular.module('platanario', ['ui.bootstrap']);
+
+        app.controller('docFilterController', function($scope, $http, $timeout) {
+
+            $scope.config = {
+                pico_components: {'p': {'label': 'Population'}, 'i': {'label': 'Intervention'}, 'c': {'label': 'Comparision'}, 'o': {'label': 'Outcome'}},
+                status: 1,
+                selected: {ckey: '', name: ''}
+            }
+
+            $scope.love_pico = {
+                'p': [
+                    {"name": "Individuals without common cold (prevention)", "phrases": []},
+                    {"name": "People with suspected or diagnosed common cold", "phrases": []},
+                    {"name": "Recurrent episodes", "phrases": []}
+                ],
+                'i': [
+                    {"name": "Vitamin C", "phrases": []},
+                    {"name": "Exercise", "phrases": []},
+                    {"name": "Echinacea", "phrases": []},
+                    {"name": "Vitamin D", "phrases": []},
+                    {"name": "Garlic", "phrases": []},
+                    {"name": "Ginger", "phrases": []},
+                    {"name": "Vaccines", "phrases": []},
+                    {"name": "Probiotics", "phrases": []},
+                    {"name": "Homeopathy", "phrases": []},
+                    {"name": "Antibiotics", "phrases": []},
+                    {"name": "Antihistamines", "phrases": []},
+                    {"name": "Non-steroidal anti-inflammatory drugs", "phrases": []},
+                    {"name": "Acetaminophen (paracetamol)", "phrases": []},
+                    {"name": "Antitussives", "phrases": []},
+                    {"name": "Decongestants", "phrases": []},
+                    {"name": "Zinc", "phrases": []},
+                    {"name": "Corticosteroids", "phrases": []},
+                    {"name": "Heated and humified air", "phrases": []},
+                    {"name": "Medicinal herbs", "phrases": []},
+                    {"name": "Chinese medicine", "phrases": []},
+                    {"name": "Intranasal ipratropium bromide", "phrases": []},
+                    {"name": "Ginseng", "phrases": []},
+                    {"name": "Agave nectar", "phrases": []},
+                    {"name": "Pelargonium sidoides", "phrases": []},
+                    {"name": "Saline nasal irrigation", "phrases": []},
+                    {"name": "Physical interventions", "phrases": []}
+                ],
+                'c': [],
+                'o': []
+            }
+
+            $scope.raw_docs = common_cold_docs;
+            $scope.docs_citations = common_cold_documents;
+            $scope.all_docs = {};
+            $scope.all_phrases = [];
+            $scope.suggested_phrases = [];
+            $scope.filters = {};
+
+            $scope.add_component = add_component;
+            $scope.select_component = select_component;
+            $scope.deselect_components = deselect_components;
+            $scope.add_phrases_to_selected_component = add_phrases_to_selected_component;
+            $scope.remove_phrase_from_component = remove_phrase_from_component;
+            $scope.update_filters = update_filters;
+            $scope.total_docs = total_docs;
+            $scope.select_phrase = select_phrase;
+            $scope._stringify = function (somejson ) {return JSON.stringify(somejson,null,"  ")}
+
+            // SET UP DOCS
+            _.chain(common_cold_docs)
+            .map(function (raw_doc) {
+                if($scope.all_docs[raw_doc.epid]) {
+                    $scope.all_docs[raw_doc.epid].phrases[raw_doc.phrase] = {'count': raw_doc.count, 'rank': raw_doc.rank}
+                } else {
+                    $scope.all_docs[raw_doc.epid] = {phrases: {}}
+                    $scope.all_docs[raw_doc.epid].phrases[raw_doc.phrase] = {
+                        'count': raw_doc.count,
+                        'rank': raw_doc.rank
+                    }
+                }
+            })
+            $scope.docs = _.clone($scope.all_docs);
+
+            // SET UP PHRASE
+            _.chain(common_cold_docs)
+            .pluck('phrase')
+            .uniq()
+            .map(function(phrase) {
+                $scope.all_phrases.push({'phrase': phrase, 'selected': false, 'assigned': false});
+            })
+
+
+            function select_component(component, ckey) {
+                _.chain($scope.love_pico)
+                .mapObject(function(components, comp_key) {
+                    _.chain(components)
+                    .map(function(component) {
+                        component.selected = false;
+                    })
+                })
+
+                component.selected = true;
+                $scope.config.selected = {ckey: ckey, name: component.name}
+            }
+
+            function deselect_components() {
+                if($scope.config.selected.ckey) {
+                    (_.find($scope.love_pico[$scope.config.selected.ckey], _is_selected_component) || {}).selected = false;
+                    $scope.config.selected = {ckey: '', name: ''};
+                }
+
+            }
+
+            var _is_selected_component = function (comp) {return comp.name == $scope.config.selected.name};
+            function add_phrases_to_selected_component() {
+                var selected_phrases = $scope.selected_phrases;
+                _.find($scope.love_pico[$scope.config.selected.ckey], _is_selected_component).phrases = _.union(
+                    _.find($scope.love_pico[$scope.config.selected.ckey], _is_selected_component).phrases,
+                    selected_phrases
+                );
+
+                _.map(selected_phrases, function (_phrase) {_phrase.assigned = true});
+                _.map($scope.all_phrases, function (_phrase) {_phrase.selected = false});
+            }
+
+            function remove_phrase_from_component(phrase, component) {
+                component.phrases.splice(component.phrases.indexOf(phrase), 1);
+                phrase.assigned = false;
+                phrase.selected = false;
+                update_selected_phrases()
+            }
+
+            function update_selected_phrases () {
+                $scope.selected_phrases = _.filter($scope.all_phrases, function (_phrase) {return _phrase.selected });
+            }
+
+            function add_component(name, comp_key) {
+                $scope.love_pico[comp_key].push({
+                    'name': name,
+                    'phrases': []
+                });
+                $scope.tmp_component = '';
+            }
+
+            function total_docs () {return _.keys($scope.docs).length }
+
+            function update_filters () {
+                _.chain($scope.love_pico)
+                .mapObject(function(components, ckey) {
+                    $scope.filters[ckey] = _.chain(components)
+                    .filter(function(_comp) {return _comp.selected})
+                    .value()
+                })
+
+                var _filter_phrases = []
+                _.chain($scope.filters)
+                .mapObject(function (components, ckey) {
+                    console.log(components);
+                    _.map(components, function (comp) {
+                        _.pluck(comp.phrases, 'phrase')
+                        .map(function (phrase) {
+                            _filter_phrases.push(phrase)
+                        })
+                    })
+                })
+                console.log(_filter_phrases);
+
+                $scope.docs = {}
+                _.chain($scope.all_docs)
+                .mapObject(function (doc, doc_id) {
+                    _.map(_filter_phrases, function (ph) {
+                        if(doc.phrases[ph] != undefined) {
+                            $scope.docs[doc_id] = doc;
+                            return;
+                        }
+                    })
+                })
+            }
+
+            function select_phrase (phrase) {
+                phrase.selected=!phrase.selected
+                if (phrase.selected) {
+                    calculate_suggestion(phrase, $scope.edges);
+                    $scope.tmp_selected_phrase = phrase;
+                } else {
+                    $scope.tmp_selected_phrase = {};
+                    $scope.suggested_phrases = {}
+                }
+                update_selected_phrases();
+            }
+
+            function calculate_suggestion (phrase, edges) {
+                var sugg_phrases = [];
+                _.chain(edges)
+                .filter(function (edge) {
+                    return edge.indexOf(phrase.phrase) >= 0;
+                })
+                .map(function (edge) {
+                    sugg = _.reject(edge, function (edge_phrase) {return edge_phrase == phrase.phrase})[0]
+                    sugg_phrases.push(sugg)
+                })
+                $scope.suggested_phrases = _.filter($scope.all_phrases, function (phrase) {
+                    return sugg_phrases.indexOf(phrase.phrase) >= 0
+                })
+            }
+
+            function phrases_graph() {
+                var edges = [];
+                _.chain($scope.all_docs)
+                .values()
+                .map(function (doc_phrases) {
+                    // debugger
+                    var phrases = _.keys(doc_phrases.phrases)
+                    for (var j = phrases.length - 1; j >= 0; j--) {
+                        for (var i = phrases.length - 1; i > j; i--) {
+                            edges.push([phrases[i], phrases[j]].sort());
+                        }
+                    }
+                })
+
+                edges = _.uniq(edges);
+                $scope.edges = edges;
+                console.log(edges);
+            }
+            phrases_graph()
+
+
+        });
+    </script>
+</head>
+
+<body ng-app="platanario">
+    <div class="container-fluid" ng-controller="docFilterController">
+        <div class="row">
+            <uib-tabset>
+                <uib-tab heading="LOVE">
+                    <div class="col-sm-12">
+                        <div ng-repeat="(comp_key, components) in love_pico" class="row">
+                            <h2 class="col-sm-12">{{config.pico_components[comp_key].label}}</h2>
+                            <div class="col-sm-6">
+                                    <div class="input-group">
+                                  <input type="text" class="form-control" placeholder="Add component" ng-model="tmp_component">
+                                  <span class="input-group-btn">
+                                    <button class="btn btn-default" type="button" ng-click="add_component(tmp_component, comp_key)">ADD!</button>
+                                  </span>
+                                </div>
+                            </div>
+                            <div class="col-sm-12">
+                                <ol>
+
+                                    <li ng-repeat="component in components track by $index | orderBy: 'name'" class="pico_component">
+                                        <strong>{{component.name}}</strong>
+                                        <button class="btn btn-xs btn-danger remove_component" ng-click="components.splice($index, 1)">remove</button>
+                                    </li>
+                                </ol>
+                            </div>
+
+                        </div>
+                    </div>
+                </uib-tab>
+
+                <uib-tab ng-click="deselect_components()" heading="LOVE-PHRASES">
+                    <div class="col-sm-6">
+                        <div ng-repeat="(comp_key, components) in love_pico" class="pico_component">
+                            <h2>{{config.pico_components[comp_key].label}}</h2>
+                            <div>
+                                <div ng-repeat="component in components">
+                                    <strong ng-click="select_component(component, comp_key)" ng-class="{'selected': component.selected}" class="clickable">{{component.name}}</strong>
+                                    <div ng-if="component.phrases.length == 0">
+                                        nothing here
+                                    </div>
+                                    <div ng-if="component.phrases.length > 0">
+                                        <ol>
+                                            <li ng-repeat="phrase in component.phrases track by $index" >{{phrase.phrase}} <span class="text-danger clickable remove_component" ng-click="remove_phrase_from_component(phrase, component)">remove</span></li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="row" style="margin-bottom: 20px">
+                            <div class="col-sm-12">
+                                <h4>Selected phrases</h4>
+                                <div class="phrases_container">
+                                    <div class="phrase clickable"
+                                          ng-repeat="phrase in selected_phrases | filter : {assigned: false} | orderBy: 'phrase'"
+                                          ng-click="select_phrase(phrase)">{{phrase.phrase}}</div>
+                                </div>
+                            </div>
+                            <div class="col-sm-12">
+                                <button class="btn btn-primary pull-right" ng-click="add_phrases_to_selected_component()" ng-disabled="!config.selected.ckey || config.selected.ckey=='' || selected_phrases.length == 0">ADD TO [{{config.selected.ckey + " - " + config.selected.name}}]</button>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-sm-12">
+                                <div class="input-group">
+                                    <input type="text" class="form-control" ng-model="phrase_search" placeholder="filter phrases">
+                                    <div class="input-group-btn">
+                                        <button class="btn btn-default" ng-click="phrase_search=''"><span class="glyphicon glyphicon-remove"></span></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-sm-12">
+                                <h4>Relevant phrases</h4>
+                                <div class="phrases_container">
+                                    <div class="phrase clickable"
+                                          ng-class="{'selected': phrase.selected}"
+                                          ng-repeat="phrase in all_phrases | filter : {assigned: false} | filter: phrase_search | orderBy: 'phrase'"
+                                          ng-click="select_phrase(phrase)">{{phrase.phrase}}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-sm-12">
+                                <h4 ng-if="!tmp_selected_phrase.phrase">Suggested phrases - nothing selected</h4>
+                                <h4 ng-if="tmp_selected_phrase.phrase">Suggested phrases - based on [{{tmp_selected_phrase.phrase}}]</h4>
+                                <div class="phrases_container">
+                                    <div class="phrase suggested clickable"
+                                          ng-class="{'selected': phrase.selected}"
+                                          ng-repeat="phrase in suggested_phrases | filter : {assigned: false} | orderBy: 'phrase'"
+                                          ng-click="select_phrase(phrase)">{{phrase.phrase}}</div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </uib-tab>
+
+                <uib-tab ng-click="deselect_components()" heading="DOCS">
+                    <div class="col-sm-6">
+                        <uib-accordion close-others="false">
+                           <div uib-accordion-group class="panel-default" heading="{{config.pico_components[comp_key].label}}" is-open="true"  ng-repeat="(comp_key, components) in love_pico">
+                                <span class="checkbox" ng-repeat="component in components">
+                                    <label>
+                                        <input type="checkbox" ng-model="component.selected" ng-change="update_filters()">
+                                        {{component.name}}
+                                    </label>
+                                </span>
+                           </div>
+                       </uib-accordion>
+                    </div>
+                    <div class="col-sm-6">
+                        <div class="selected_filters">
+                            <div ng-repeat="(ckey, components) in filters">
+                                <div ng-repeat="component in components">
+                                    <strong>{{component.name}}:</strong>
+                                    <span ng-repeat="phrase in component.phrases">{{phrase.phrase}}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="selected_filters">TOTAL DOCS {{total_docs()}}</div>
+                        <div ng-repeat="(doc_id,doc) in docs" class="document">
+                            <p>
+                                <strong>ID</strong> {{::doc_id}} <a href="https://epistemonikos.org/documents/{{::doc_id}}" target="_blank"><small>open</small></a>
+                            </p>
+                            <p>
+                                <div><i ng-init="_class=docs_citations[doc_id].metadata.classification || 'RAW'"><strong class="text-{{_class=='systematic-review' ? 'primary': (_class=='primary-study' ? 'warning': 'danger')}}">{{::_class}}</strong></i></div>
+                                <i>{{::docs_citations[doc_id].citation}}</i>
+                            </p>
+
+                            <div ng-init="doc.show_phrases = false">
+                                <div><strong>PHRASES</strong> <span class="clickable" ng-click="doc.show_phrases=!doc.show_phrases">({{ doc.show_phrases ? 'hide' : 'show' }})</span></div>
+                                <div ng-show="doc.show_phrases">
+                                    <p ng-repeat="(phrase, phrase_data) in doc.phrases">
+                                        {{::phrase}} (C:{{::phrase_data.count}}, R:{{::phrase_data.rank}})
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </uib-tab>
+
+                <uib-tab heading="DEBUG">
+                    <h1>LOVE</h1>
+                    <textarea rows="30" cols="80">{{_stringify(love_pico)}}</textarea>
+                    <h1>ALL PHRASES</h1>
+                    <textarea rows="30" cols="80">{{_stringify(all_phrases)}}</textarea>
+                    <h1>ALL DOCS</h1>
+                    <textarea rows="30" cols="80">{{_stringify(all_docs)}}</textarea>
+                </uib-tab>
+            </uib-tabset>
+        </div>
+
+    </div>
+</body>
+</html>

@@ -1,2 +1,3 @@
+networkx==1.11
 spacy==1.8.2
 -e git://github.com/dperezrada/pytextrank.git@6412dc193d1d91a010e29cabde96525dc2a39ab3#egg=pytextrank
