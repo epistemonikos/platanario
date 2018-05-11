@@ -66,9 +66,11 @@ def calculate_stopwords(folder_path, column_indexes):
     phrases = []
     for input_path in glob.glob(folder_path + "/*.tsv"):
         file_id = input_path.split("/")[-1].split(".tsv")[0]
+        print("PHRASES: %s" % file_id, file=sys.stderr)
         for row in read_rows(input_path, sep="\t"):
             texts = [row[column_index] for column_index in column_indexes]
             phrases.append((file_id, Phrases(texts).all_phrases))
+    print("CALCULATING STOPWORDS", file=sys.stderr)
     stop_words_instance = Stopwords(phrases)
     stopwords = stop_words_instance.calculate_stopwords()
     for stopword in stopwords:
