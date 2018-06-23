@@ -10,9 +10,11 @@
   "author": "Daniel Pérez Rada",
   "license": "ISC",
   "dependencies": {
+    "axios": "^0.18.0",
     "cors": "^2.8.4",
     "dotenv": "^6.0.0",
     "express": "^4.16.3",
+    "express-session": "^1.15.6",
     "ipfs-api": "^22.0.2",
     "node-rsa": "^1.0.0"
   }
