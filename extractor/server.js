@@ -7,11 +7,10 @@ const NodeRSA = require('node-rsa');
 const path = require("path")
 const session = require('express-session')
 const axios = require('axios')
+var crypto = require('crypto');
 
 
 require('dotenv').config()
-
-const DATA_PATH = process.env.DATA_PATH
 
 var ipfs = ipfsAPI(process.env.IPFS)
 
@@ -22,7 +21,10 @@ app.use(express.json());
 
 var sess = {
   secret: process.env.SECRET,
-  cookie: { maxAge: 3600000 }
+  cookie: { maxAge: 3600000 },
+  proxy: true,
+  resave: true,
+  saveUninitialized: true
 }
 
 if (app.get('env') === 'production') {
@@ -109,6 +111,7 @@ function storeFile(folder, dataContent, filename){
 };
 
 const mkdirSync = function (dirPath) {
+	console.log(dirPath)
 	// FROM: https://stackoverflow.com/a/24311711
 	try {
 		fs.mkdirSync(dirPath)
@@ -117,18 +120,31 @@ const mkdirSync = function (dirPath) {
 	}
 }
 
-let getHighlightPath = function(highlightId) {
+let getHighlightPath = function(highlightId, userHash) {
 	let baseFolderPath = path.join(process.env.FILES_PATH, highlightId.substring(0,3))
-	let folderPath = path.join(baseFolderPath, highlightId)
-	return [baseFolderPath, folderPath]
+	let userFolderPath = path.join(baseFolderPath, userHash)
+	let folderPath = path.join(userFolderPath, highlightId)
+	return [baseFolderPath, userFolderPath, folderPath]
+}
+
+let getDataPath = function(referenceId, userHash) {
+	let baseFolderPath = path.join(process.env.DATA_PATH, referenceId.substring(0,3))
+	let referenceFolderPath = path.join(baseFolderPath, referenceId)
+	let ReferenceUserPath = path.join(referenceFolderPath, userHash + ".json")
+	return [baseFolderPath, referenceFolderPath, ReferenceUserPath]
+}
+
+let mkdirAll = function (folders) {
+	for (var i = 0; i < folders.length ; i++) {
+		mkdirSync(folders[i])
+	}
 }
 
 app.post('/highlights', restrict, async (req, res) => {
 	let links = []
 	let highlightId = req.body.id
-	let [baseFolderPath, folderPath] = getHighlightPath(highlightId)
-	mkdirSync(baseFolderPath)
-	mkdirSync(folderPath)
+	let [baseFolderPath, userFolderPath, folderPath] = getHighlightPath(highlightId, req.session.user.hash)
+	mkdirAll([baseFolderPath, userFolderPath, folderPath])
 	
 
 	let highlightImage = await storeFile(folderPath, req.body.content.image, "image.png")
@@ -136,6 +152,8 @@ app.post('/highlights', restrict, async (req, res) => {
 	
 	delete req.body.content
 	req.body.comment = req.body.comment.text
+	req.body.user = req.session.user.hash
+	req.body.comment.text
 	let infoData = await storeFile(folderPath, req.body, "info.json")
 	links.push(infoData.ipfsObject)
 
@@ -152,8 +170,8 @@ app.post('/highlights', restrict, async (req, res) => {
 	))
 })
 
-let readReferenceInfo = function (referenceId) {
-	let datapath = DATA_PATH + "/" + referenceId + ".json"
+let readReferenceInfo = function (referenceId, userHash) {
+	let [baseFolderPath, referenceFolderPath, datapath] = getDataPath(referenceId, userHash)
 	if (fs.existsSync(datapath)) {
 		let data = fs.readFileSync(datapath).toString()
 		if (data) {
@@ -179,9 +197,12 @@ app.post('/login', async (req, res) => {
 		if(response.status == 200){
 			return req.session.regenerate(function(){
 				req.session.user = {}
-				req.session.user.email = toSend.email
+				req.session.user.email = toSend.email.toLowerCase()
 				req.session.user.token = response.data.session_token
 				req.session.user.token_expires_at = response.data.expires_at
+				let hash = crypto.createHash('sha256').update(process.env.SECRET + req.session.user.email).digest('base64');
+				let hash2 = crypto.createHash('sha256').update(hash).digest('base64');
+				req.session.user.hash = hash2
 				return res.send(JSON.stringify({'status': 'ok'}))
 			});
 		}
@@ -197,16 +218,15 @@ app.post('/login', async (req, res) => {
 
 app.get('/references/:referenceId', restrict, (req, res) => {
 	let referenceId = req.params.referenceId
-	mkdirSync(DATA_PATH)
-	let data = readReferenceInfo(referenceId) || {}
+	let data = readReferenceInfo(referenceId, req.session.user.hash) || {}
 	res.setHeader('Content-Type', 'application/json')
 	return res.send(JSON.stringify(data))
 })
 
 app.post('/references/:referenceId', restrict, (req, res) => {
 	let referenceId = req.params.referenceId
-	mkdirSync(DATA_PATH)
-	let datapath = DATA_PATH + "/" + referenceId + ".json"
+	let [baseFolderPath, referenceFolderPath, datapath] = getDataPath(referenceId, req.session.user.hash)
+	mkdirAll([baseFolderPath, referenceFolderPath])
 	console.log(new Date().toISOString(), "\tREF_ID: ", referenceId, "\t", JSON.stringify(req.body))
 	res.setHeader('Content-Type', 'application/json')
 	fs.writeFile(datapath, JSON.stringify(req.body), function(err) {
@@ -219,12 +239,12 @@ app.post('/references/:referenceId', restrict, (req, res) => {
 
 app.get('/references/:referenceId/highlights', restrict, (req, res) => {
 	let referenceId = req.params.referenceId
-	let referenceInfo = readReferenceInfo(referenceId) || {}
+	let referenceInfo = readReferenceInfo(referenceId, req.session.user.hash) || {}
 	let highlights = []
 	Object.keys(referenceInfo).forEach(function(key) {
 	    let highlightId = referenceInfo[key].highlightId
 	    if(highlightId){
-			let [baseFolderPath, highlightPath] = getHighlightPath(highlightId)
+			let [baseFolderPath, userFolderPath, highlightPath] = getHighlightPath(highlightId, req.session.user.hash)
 			let originalData = fs.readFileSync(path.join(highlightPath, 'image.png'))
 			let base64Image = new Buffer(originalData, 'binary').toString('base64')
 			let highlightInfo = JSON.parse(fs.readFileSync(path.join(highlightPath, 'info.json')).toString())
