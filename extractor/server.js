@@ -17,7 +17,9 @@ var ipfs = ipfsAPI(process.env.IPFS)
 const app = express()
 
 app.use(cors())
-app.use(express.json());
+var bodyParser = require('body-parser');
+app.use(bodyParser.json({limit: '50mb'}));
+app.use(bodyParser.urlencoded({limit: '50mb', extended: true}));
 
 var sess = {
   secret: process.env.SECRET,

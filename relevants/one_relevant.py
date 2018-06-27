@@ -11,7 +11,9 @@ def print_row(row):
 def calculate_textrank_for_file(input_path, stopwords=None):
     text_rank = RelevantPhrases(stopwords)
     for line in open(input_path):
-        text_rank.add_text(line)
+        clean_line = line.strip()
+        if clean_line:
+            text_rank.add_text(clean_line)
     text_rank.calculate()
     for group_id in text_rank.groups_phrases:
         for phrase_data in sorted(
